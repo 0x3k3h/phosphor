@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   KLICK_MAIL // V.1.0.0
-   Desktop mail client for a Phosphor server. Talks to {ENDPOINT}/api/* with a
+   KlickMail — client
+   Simple mail client for a Phosphor server. Talks to {ENDPOINT}/api/* with a
    bearer token. No build step, no framework.
    ═══════════════════════════════════════════════════════════════════════════ */
 "use strict";
@@ -41,6 +41,42 @@ const $ = (s, r = document) => r.querySelector(s);
 const clear = (n) => { while (n && n.firstChild) n.removeChild(n.firstChild); return n; };
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
+/* ── icons (inline SVG, stroke) ─────────────────────────────────────────── */
+const ICON = {
+  mail: "M4 4h16v16H4z M22 6l-10 7L2 6",
+  inbox: "M4 13h4l1.5 3h5L16 13h4 M4 13l3-8h10l3 8v6H4z",
+  send: "M22 2L11 13 M22 2l-7 20-4-9-9-4 20-7z",
+  users: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8 M22 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75",
+  megaphone: "M3 11l14-7v16L3 15v-4z M3 11H2v4h1 M8 13v6a2 2 0 0 0 4 0v-4",
+  settings: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z",
+  reply: "M9 17l-6-6 6-6 M3 11h10a8 8 0 0 1 8 8v1",
+  archive: "M3 3h18v4H3z M5 7v14h14V7 M10 12h4",
+  trash: "M3 6h18 M8 6V4h8v2 M6 6l1 14h10l1-14",
+  plus: "M12 5v14 M5 12h14",
+  upload: "M12 15V3 M7 8l5-5 5 5 M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4",
+  x: "M18 6L6 18 M6 6l12 12",
+  pause: "M6 4h4v16H6z M14 4h4v16h-4z",
+  play: "M6 4l14 8-14 8z",
+  logout: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4 M16 17l5-5-5-5 M21 12H9",
+  check: "M20 6L9 17l-5-5",
+  refresh: "M21 12a9 9 0 1 1-3-6.7 M21 3v6h-6",
+};
+function icon(name) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "1.8");
+  svg.setAttribute("stroke-linecap", "round");
+  svg.setAttribute("stroke-linejoin", "round");
+  (ICON[name] || "").split(" M").forEach((seg, i) => {
+    const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    p.setAttribute("d", (i ? "M" : "") + seg);
+    svg.append(p);
+  });
+  return svg;
+}
+
 /* ── API ───────────────────────────────────────────────────────────────── */
 function apiBase() { return (ENDPOINT || "").replace(/\/+$/, ""); }
 
@@ -56,7 +92,7 @@ async function api(path, { method, body, form, raw, base } = {}) {
   try {
     res = await fetch((base || apiBase()) + "/api" + path, { method, headers, body: payload });
   } catch (e) {
-    throw new Error("network unreachable — is the Phosphor endpoint correct and running?");
+    throw new Error("Can't reach the server — check the endpoint URL and that Phosphor is running.");
   }
   if (res.status === 401 && !path.startsWith("/auth/")) { disconnect(true); throw new Error("session expired"); }
   if (res.status === 204) return null;
@@ -90,12 +126,12 @@ function modal({ title, body, wide, actions }) {
   clear(root).append(scrim);
   return close;
 }
-function confirmDialog(msg, onYes, { yes = "CONFIRM()", danger = true } = {}) {
+function confirmDialog(msg, onYes, { yes = "Confirm", danger = true } = {}) {
   modal({
-    title: "CONFIRM", body: el("p", {}, msg),
+    title: "Confirm", body: el("p", {}, msg),
     actions: (close) => [
-      el("button", { class: "btn ghost", onclick: close }, "CANCEL()"),
-      el("button", { class: "btn " + (danger ? "danger" : ""), onclick: async () => { close(); try { await onYes(); } catch (e) { fail(e); } } }, yes),
+      el("button", { class: "btn ghost", onclick: close }, "Cancel"),
+      el("button", { class: "btn " + (danger ? "danger" : "primary"), onclick: async () => { close(); try { await onYes(); } catch (e) { fail(e); } } }, yes),
     ],
   });
 }
@@ -130,7 +166,7 @@ function persistConn(endpoint, token, identity) {
 function disconnect(expired) {
   TOKEN = "";
   localStorage.removeItem(LS.token);
-  if (expired) toast("session expired — reconnect", "warn");
+  if (expired) toast("Session expired — reconnect", "warn");
   renderConnect();
 }
 
@@ -148,35 +184,35 @@ async function renderConnect() {
     el("label", { class: "f" }, el("span", {}, "Operator email"), emailIn),
     el("label", { class: "f" }, el("span", {}, "Password"), passIn),
   );
-  const probeBtn = el("button", { class: "btn block" }, "PING()");
-  const loginBtn = el("button", { class: "btn block hidden" }, "CONNECT()");
+  const probeBtn = el("button", { class: "btn block" }, "Test connection");
+  const loginBtn = el("button", { class: "btn primary block hidden" }, "Connect");
 
   let verified = null;
 
   async function probe() {
-    probeBtn.disabled = true; probeBtn.textContent = "PING…";
+    probeBtn.disabled = true; probeBtn.textContent = "Testing…";
     info.textContent = "";
     const base = epIn.value.trim().replace(/\/+$/, "");
     try {
       const h = await api("/health", { base });
-      if (!h || h.app !== "phosphor") throw new Error("that endpoint answered but it isn't a Phosphor server");
+      if (!h || h.app !== "phosphor") throw new Error("Reached something, but it isn't a Phosphor server.");
       verified = { base, health: h };
-      info.innerHTML = `<span style="color:var(--ok)">■</span> PHOSPHOR ${esc(h.version)} // domain: ${esc(h.primary_domain)} // host: ${esc(h.server_hostname)}`;
+      info.innerHTML = `<span style="color:var(--ok)">●</span> Phosphor ${esc(h.version)} · ${esc(h.primary_domain)}`;
       loginBox.classList.remove("hidden");
       loginBtn.classList.remove("hidden");
       probeBtn.classList.add("hidden");
       emailIn.focus();
     } catch (e) {
       verified = null;
-      info.innerHTML = `<span style="color:var(--bad)">■</span> ${esc(e.message)}`;
+      info.innerHTML = `<span style="color:var(--bad)">●</span> ${esc(e.message)}`;
     } finally {
-      probeBtn.disabled = false; probeBtn.textContent = "PING()";
+      probeBtn.disabled = false; probeBtn.textContent = "Test connection";
     }
   }
 
   async function login() {
     if (!verified) return probe();
-    loginBtn.disabled = true; loginBtn.textContent = "CONNECT…";
+    loginBtn.disabled = true; loginBtn.textContent = "Connecting…";
     try {
       const r = await api("/auth/login", { base: verified.base, body: { email: emailIn.value.trim(), password: passIn.value } });
       persistConn(verified.base, r.access_token, {
@@ -186,9 +222,9 @@ async function renderConnect() {
         version: verified.health.version,
         outbound: verified.health.outbound_enabled,
       });
-      toast("connected // " + verified.base, "ok");
+      toast("Connected to " + verified.base, "ok");
       boot();
-    } catch (e) { fail(e); loginBtn.disabled = false; loginBtn.textContent = "CONNECT()"; }
+    } catch (e) { fail(e); loginBtn.disabled = false; loginBtn.textContent = "Connect"; }
   }
 
   probeBtn.addEventListener("click", probe);
@@ -203,16 +239,15 @@ async function renderConnect() {
   clear($("#app")).append(el("div", { class: "connect-wrap" },
     el("div", { class: "connect" },
       el("div", { class: "cx-head" },
-        el("div", { class: "big-mark" }, "KLICK_MAIL // V.1.0.0"),
-        el("h1", { class: "mt-s tight" }, "Klick", el("br"), "Mail"),
+        el("div", { class: "logo" }, icon("mail"), el("h1", {}, "KlickMail")),
+        el("div", { class: "sub" }, "Connect to your Phosphor mail server"),
       ),
       el("div", { class: "cx-body" },
-        el("p", { class: "tokens mb" }, "CONNECT TO YOUR ", el("b", {}, "PHOSPHOR"), " MAIL SERVER"),
-        el("label", { class: "f" }, el("span", {}, "Phosphor API endpoint"), epIn),
+        el("label", { class: "f" }, el("span", {}, "Server endpoint"), epIn),
         info,
         loginBox,
         el("div", { class: "mt" }, probeBtn, loginBtn),
-        el("p", { class: "hint mt" }, "Runs against a Phosphor server on your network, Tailscale, or a Cloudflare tunnel. Nothing is sent anywhere else."),
+        el("p", { class: "hint mt" }, "Works over your LAN, Tailscale, or a Cloudflare tunnel. Your login is stored only on this device."),
       ),
     ),
   ));
@@ -220,39 +255,46 @@ async function renderConnect() {
 }
 
 /* ═══ SHELL ════════════════════════════════════════════════════════════════ */
-const TABS = ["inbox", "compose", "contacts", "mass_mail", "specs"];
+const NAV = [
+  { id: "inbox", label: "Inbox", icon: "inbox" },
+  { id: "compose", label: "Compose", icon: "send" },
+  { id: "contacts", label: "Contacts", icon: "users" },
+  { id: "mass_mail", label: "Mass mail", icon: "megaphone" },
+  { id: "specs", label: "Settings", icon: "settings" },
+];
 let TAB = "inbox";
 
 function shell() {
-  const tabs = el("div", { class: "tabs" }, ...TABS.map((t) =>
-    el("button", { class: "tab" + (t === TAB ? " active" : ""), "data-tab": t, onclick: () => go(t) },
-      t.replace("_", "_"))));
+  const nav = el("div", { class: "sb-nav" }, ...NAV.map((n) =>
+    el("button", { class: "nav-item" + (n.id === TAB ? " active" : ""), "data-tab": n.id, onclick: () => go(n.id) },
+      icon(n.icon), el("span", {}, n.label))));
   return el("div", { id: "app" },
     el("div", { id: "shell" },
-      el("div", { class: "topbar" },
-        el("span", { class: "brand" }, "KLICK_MAIL"),
-        el("span", { class: "ver" }, "V.1.0.0"),
-        tabs,
-        el("span", { class: "spacer" }),
-        el("span", { class: "ver", id: "conn-tag" }, IDENTITY ? IDENTITY.domain : ""),
+      el("aside", { class: "sidebar" },
+        el("div", { class: "sb-head" }, icon("mail"), el("span", { class: "name" }, "KlickMail"), el("span", { class: "ver" }, "v1.0.0")),
+        nav,
+        el("div", { class: "sb-foot" },
+          el("div", { class: "conn" }, el("span", { id: "conn-tag" }, IDENTITY ? IDENTITY.domain : "")),
+          el("div", { class: "tag" }, "Simple. Minimal. Effective.")),
       ),
-      el("div", { class: "main" }, el("div", { class: "view", id: "view" }, el("div", { class: "loader" }, "load"))),
+      el("main", { class: "main" }, el("div", { class: "view", id: "view" }, el("div", { class: "loader" }, "Loading"))),
     ),
   );
 }
 
-function setTabActive(t) {
+function setNavActive(t) {
   document.querySelectorAll("[data-tab]").forEach((b) => b.classList.toggle("active", b.dataset.tab === t));
 }
 function viewNode() { const v = $("#view"); v.classList.remove("pad-0"); return clear(v); }
+function viewTitle(t, sub) { return el("div", { class: "view-title" }, t, sub && el("span", { class: "s" }, sub)); }
 
 let _seq = 0;
 async function go(t) {
   if (!VIEWS[t]) t = "inbox";
-  TAB = t; setTabActive(t);
+  TAB = t; setNavActive(t);
   const seq = ++_seq;
   try { await VIEWS[t](); }
-  catch (e) { if (seq === _seq) { fail(e); viewNode().append(el("div", { class: "empty" }, "load failed // " + esc(e.message))); } }
+  catch (e) { if (seq === _seq) { fail(e); viewNode().append(el("div", { class: "empty" }, el("div", { class: "t" }, "Couldn't load: " + esc(e.message)))); } }
 }
 
 async function ensureRefs() {
@@ -270,25 +312,24 @@ VIEWS.inbox = async () => {
   const v = viewNode(); v.classList.add("pad-0");
   if (!CACHE.mailboxes.length) {
     v.classList.remove("pad-0");
-    v.append(el("div", { class: "empty" }, el("div", { class: "mk" }, "∅"),
-      "no mailboxes on this server", el("div", { class: "hint mt" }, "create one in the Phosphor control panel first")));
+    v.append(viewTitle("Inbox"), el("div", { class: "empty" }, icon("inbox"),
+      el("div", { class: "t" }, "No mailboxes on this server"),
+      el("p", { class: "hint mt" }, "Create one in the Phosphor control panel first.")));
     return;
   }
   if (!INBOX.mailboxId || !CACHE.mailboxes.find((m) => m.id === INBOX.mailboxId)) {
     INBOX.mailboxId = +(localStorage.getItem(LS.mailbox) || 0) || CACHE.mailboxes[0].id;
   }
-
-  const sel = el("select", { style: "max-width:260px", onchange: (e) => {
+  const sel = el("select", { style: "max-width:250px", onchange: (e) => {
     INBOX.mailboxId = +e.target.value; INBOX.messageId = null;
     localStorage.setItem(LS.mailbox, e.target.value); drawMail();
   } }, ...CACHE.mailboxes.map((m) => el("option", { value: m.id, selected: m.id === INBOX.mailboxId }, m.address)));
 
   v.append(
-    el("div", { class: "row", style: "padding:12px var(--pad);border-bottom:1px solid var(--line)" },
-      el("span", { class: "section-label", style: "margin:0" }, "INBOX"),
+    el("div", { class: "row", style: "padding:16px 24px;border-bottom:1px solid var(--line)" },
       sel, el("span", { class: "spacer" }),
-      el("button", { class: "btn sm", onclick: () => { go("compose"); } }, "COMPOSE()")),
-    el("div", { class: "mail", id: "mail", style: "height:calc(100% - 49px)" }),
+      el("button", { class: "btn primary sm", onclick: () => go("compose") }, icon("send"), "Compose")),
+    el("div", { class: "mail", id: "mail", style: "height:calc(100% - 57px)" }),
   );
   await drawMail();
 };
@@ -308,10 +349,10 @@ async function drawMail() {
         el("span", {}, f), el("span", { class: "dimmer" }, c.unread ? `${c.unread}/${c.total}` : (c.total || "")));
     })),
     el("div", { class: "mail-list", id: "mlist" }),
-    el("div", { class: "mail-read", id: "mread" }, el("div", { class: "empty" }, "select a message")),
+    el("div", { class: "mail-read", id: "mread" }, el("div", { class: "empty" }, el("div", { class: "t" }, "Select a message"))),
   );
   const list = $("#mlist");
-  if (!msgs.length) { list.append(el("div", { class: "t-empty" }, "empty")); return; }
+  if (!msgs.length) { list.append(el("div", { class: "t-empty" }, "Nothing here")); return; }
   for (const m of msgs) {
     list.append(el("div", { class: "mi" + (m.is_read ? "" : " unread") + (m.id === INBOX.messageId ? " sel" : ""), onclick: () => openMsg(m.id) },
       el("div", { class: "mi-top" }, el("span", { class: "truncate" }, m.from_name || m.from_addr || "(unknown)"), el("span", { class: "dimmer nowrap" }, fmtDate(m.received_at))),
@@ -324,28 +365,28 @@ async function drawMail() {
 async function openMsg(id) {
   INBOX.messageId = id;
   document.querySelectorAll(".mi").forEach((n) => n.classList.remove("sel"));
-  const read = clear($("#mread")); read.append(el("div", { class: "loader" }, "open"));
+  const read = clear($("#mread")); read.append(el("div", { class: "loader" }, "Opening"));
   const m = await api(`/mail/${INBOX.mailboxId}/messages/${id}`);
   const frame = el("iframe", { sandbox: "" });
   read.replaceChildren(
     el("div", { class: "row mb" },
-      el("button", { class: "btn sm", onclick: () => replyTo(m) }, "REPLY()"),
-      el("button", { class: "btn sm ghost", onclick: () => moveMsg(id, "Archive") }, "ARCHIVE()"),
-      el("button", { class: "btn sm ghost", onclick: () => moveMsg(id, "Spam") }, "SPAM()"),
-      el("button", { class: "btn sm danger", onclick: () => delMsg(id) }, "DELETE()")),
+      el("button", { class: "btn sm", onclick: () => replyTo(m) }, icon("reply"), "Reply"),
+      el("button", { class: "btn sm ghost", onclick: () => moveMsg(id, "Archive") }, icon("archive"), "Archive"),
+      el("button", { class: "btn sm ghost", onclick: () => moveMsg(id, "Spam") }, "Spam"),
+      el("button", { class: "btn sm danger", onclick: () => delMsg(id) }, icon("trash"), "Delete")),
     el("div", { class: "mr-head" },
       el("div", { class: "mr-subj" }, m.subject || "(no subject)"),
-      el("div", { class: "mr-meta" }, `FROM ${esc(m.from_name || "")} <${esc(m.from_addr)}>`),
-      el("div", { class: "mr-meta" }, `TO ${(m.to_addrs || []).map(esc).join(", ") || "—"}`),
+      el("div", { class: "mr-meta" }, `From ${esc(m.from_name || "")} <${esc(m.from_addr)}>`),
+      el("div", { class: "mr-meta" }, `To ${(m.to_addrs || []).map(esc).join(", ") || "—"}`),
       el("div", { class: "mr-meta" }, new Date(m.received_at).toLocaleString())),
     frame,
   );
-  const html = m.body_html || ("<pre style='white-space:pre-wrap;font-family:monospace'>" + esc(m.body_text || "(empty)") + "</pre>");
-  frame.srcdoc = `<!doctype html><meta charset=utf-8><base target=_blank><style>body{font:13px/1.6 ui-monospace,Menlo,Consolas,monospace;color:#000;padding:10px}</style>${html}`;
+  const html = m.body_html || ("<pre style='white-space:pre-wrap;font-family:inherit'>" + esc(m.body_text || "(empty)") + "</pre>");
+  frame.srcdoc = `<!doctype html><meta charset=utf-8><base target=_blank><style>body{font:14px/1.6 -apple-system,Segoe UI,Roboto,sans-serif;color:#111;padding:12px}</style>${html}`;
   drawMail();
 }
-async function moveMsg(id, folder) { await api(`/mail/${INBOX.mailboxId}/messages/${id}/move?folder=${folder}`, { method: "POST" }); toast(folder.toUpperCase(), "ok"); INBOX.messageId = null; drawMail(); }
-async function delMsg(id) { await api(`/mail/${INBOX.mailboxId}/messages/${id}`, { method: "DELETE" }); toast("DELETED", "ok"); INBOX.messageId = null; drawMail(); }
+async function moveMsg(id, folder) { await api(`/mail/${INBOX.mailboxId}/messages/${id}/move?folder=${folder}`, { method: "POST" }); toast(folder, "ok"); INBOX.messageId = null; drawMail(); }
+async function delMsg(id) { await api(`/mail/${INBOX.mailboxId}/messages/${id}`, { method: "DELETE" }); toast("Deleted", "ok"); INBOX.messageId = null; drawMail(); }
 function replyTo(m) {
   COMPOSE_PREFILL = {
     from_mailbox_id: INBOX.mailboxId,
@@ -353,7 +394,7 @@ function replyTo(m) {
     subject: /^re:/i.test(m.subject || "") ? m.subject : "Re: " + (m.subject || ""),
     in_reply_to: m.message_id,
     references: ((m.references || "") + " " + m.message_id).trim(),
-    body_html: `<br><br><blockquote style="border-left:2px solid #999;padding-left:10px;color:#555">${esc(m.snippet || "")}</blockquote>`,
+    body_html: `<br><br><blockquote style="border-left:2px solid #999;padding-left:10px;color:#666">${esc(m.snippet || "")}</blockquote>`,
     mode: "html",
   };
   go("compose");
@@ -366,13 +407,12 @@ VIEWS.compose = async () => {
   await ensureRefs();
   const v = viewNode();
   const pre = COMPOSE_PREFILL || {}; COMPOSE_PREFILL = null;
-
-  if (!CACHE.mailboxes.length) { v.append(el("div", { class: "empty" }, "no mailboxes")); return; }
+  if (!CACHE.mailboxes.length) { v.append(viewTitle("Compose"), el("div", { class: "empty" }, el("div", { class: "t" }, "No mailboxes"))); return; }
 
   const from = el("select", {}, ...CACHE.mailboxes.map((m) =>
     el("option", { value: m.id, selected: m.id === (pre.from_mailbox_id || INBOX.mailboxId) }, m.address)));
   const to = el("input", { value: pre.to || "", placeholder: "someone@example.com, other@example.com" });
-  const cc = el("input", { placeholder: "cc (optional)" });
+  const cc = el("input", { placeholder: "optional" });
   const subject = el("input", { value: pre.subject || "" });
   const body = el("textarea", { style: "min-height:320px" }, pre.body_html || pre.body_text || "");
   let mode = pre.mode || "text";
@@ -380,21 +420,21 @@ VIEWS.compose = async () => {
   const preview = el("iframe", { class: "preview-frame hidden", sandbox: "" });
   const modeBtn = el("button", { class: "btn sm ghost", onclick: () => { mode = mode === "html" ? "text" : "html"; syncMode(); } });
   function syncMode() {
-    modeBtn.textContent = mode === "html" ? "MODE: HTML" : "MODE: TEXT";
+    modeBtn.textContent = mode === "html" ? "HTML" : "Plain text";
     preview.classList.toggle("hidden", mode !== "html");
     if (mode === "html") renderPreview();
   }
   function renderPreview() {
-    preview.srcdoc = `<!doctype html><meta charset=utf-8><base target=_blank><style>body{font:13px/1.6 system-ui,sans-serif;color:#000;padding:10px}</style>${body.value}`;
+    preview.srcdoc = `<!doctype html><meta charset=utf-8><base target=_blank><style>body{font:14px/1.6 system-ui,sans-serif;color:#111;padding:12px}</style>${body.value}`;
   }
   body.addEventListener("input", () => { if (mode === "html") renderPreview(); });
 
-  const sendBtn = el("button", { class: "btn", onclick: send }, "SEND()");
+  const sendBtn = el("button", { class: "btn primary", onclick: send }, icon("send"), "Send");
   async function send() {
     const parse = (s) => s.split(",").map((x) => x.trim()).filter(Boolean);
     const tos = parse(to.value);
-    if (!tos.length) return toast("no recipients", "warn");
-    sendBtn.disabled = true; sendBtn.textContent = "SEND…";
+    if (!tos.length) return toast("Add at least one recipient", "warn");
+    sendBtn.disabled = true; sendBtn.textContent = "Sending…";
     try {
       await api(`/mail/${from.value}/send`, { body: {
         from_mailbox_id: +from.value, to: tos, cc: parse(cc.value), bcc: [],
@@ -403,21 +443,21 @@ VIEWS.compose = async () => {
         body_html: mode === "html" ? body.value : "",
         in_reply_to: pre.in_reply_to || "", references: pre.references || "",
       } });
-      toast("QUEUED // " + tos.length + " RCPT", "ok");
+      toast(`Queued to ${tos.length} recipient${tos.length > 1 ? "s" : ""}`, "ok");
       to.value = cc.value = subject.value = body.value = ""; renderPreview();
     } catch (e) { fail(e); }
-    finally { sendBtn.disabled = false; sendBtn.textContent = "SEND()"; }
+    finally { sendBtn.disabled = false; sendBtn.replaceChildren(icon("send"), document.createTextNode("Send")); }
   }
 
   v.append(
-    el("div", { class: "section-label" }, "COMPOSE"),
+    viewTitle("Compose"),
     el("div", { class: "panel" }, el("div", { class: "panel-body" },
       el("div", { class: "f2" },
         el("label", { class: "f" }, el("span", {}, "From"), from),
         el("label", { class: "f" }, el("span", {}, "To"), to)),
       el("label", { class: "f" }, el("span", {}, "Cc"), cc),
       el("label", { class: "f" }, el("span", {}, "Subject"), subject),
-      el("div", { class: "spread mb" }, el("span", { class: "dimmer up", style: "font-size:10px" }, "Body"), modeBtn),
+      el("div", { class: "spread mb" }, el("span", { class: "dim small" }, "Body"), modeBtn),
       el("div", { class: "split" }, body, preview),
       el("div", { class: "mt" }, sendBtn),
     )),
@@ -428,18 +468,18 @@ VIEWS.compose = async () => {
 /* ---- CONTACTS --------------------------------------------------------- */
 VIEWS.contacts = async () => {
   const v = viewNode();
-  const search = el("input", { placeholder: "search", style: "max-width:280px" });
-  v.append(el("div", { class: "section-label" }, "CONTACTS_LIST"),
+  const search = el("input", { placeholder: "Search", style: "max-width:280px" });
+  v.append(viewTitle("Contacts"),
     el("div", { class: "spread mb" }, search, el("div", { class: "row" },
-      el("button", { class: "btn sm", onclick: importContacts }, "IMPORT_CSV()"),
-      el("button", { class: "btn sm", onclick: () => contactForm() }, "ADD()"))));
+      el("button", { class: "btn sm", onclick: importContacts }, icon("upload"), "Import CSV"),
+      el("button", { class: "btn primary sm", onclick: () => contactForm() }, icon("plus"), "Add contact"))));
   const host = el("div", { id: "chost" }); v.append(host);
 
   const load = async () => {
     const q = search.value.trim();
     const rows = await api("/contacts?limit=300" + (q ? "&q=" + encodeURIComponent(q) : ""));
     const box = clear(host);
-    if (!rows.length) { box.append(el("div", { class: "empty" }, el("div", { class: "mk" }, "0x00"), "no contacts // import a csv")); return; }
+    if (!rows.length) { box.append(el("div", { class: "empty" }, icon("users"), el("div", { class: "t" }, "No contacts yet"), el("p", { class: "hint mt" }, "Import a CSV to get started."))); return; }
     box.append(el("div", { class: "panel" }, el("div", { class: "panel-body tight" }, el("table", {},
       el("thead", {}, el("tr", {}, el("th", {}, "Email"), el("th", {}, "Name"), el("th", {}, "Company"), el("th", {}, "Status"), el("th", {}, ""))),
       el("tbody", {}, ...rows.map((c) => el("tr", { class: "clickable", onclick: () => contactForm(c) },
@@ -447,7 +487,7 @@ VIEWS.contacts = async () => {
         el("td", { class: "dim" }, `${c.first_name} ${c.last_name}`.trim() || "—"),
         el("td", { class: "dim" }, c.company || "—"),
         el("td", {}, statusPill(c.status)),
-        el("td", { style: "text-align:right" }, el("button", { class: "btn sm danger", onclick: (e) => { e.stopPropagation(); confirmDialog(`Delete ${c.email}?`, async () => { await api(`/contacts/${c.id}`, { method: "DELETE" }); toast("DELETED", "ok"); load(); }); } }, "×")))),
+        el("td", { style: "text-align:right" }, el("button", { class: "btn sm ghost danger", onclick: (e) => { e.stopPropagation(); confirmDialog(`Delete ${c.email}?`, async () => { await api(`/contacts/${c.id}`, { method: "DELETE" }); toast("Deleted", "ok"); load(); }, { yes: "Delete" }); } }, icon("x"))))),
     )))));
   };
   let t; search.addEventListener("input", () => { clearTimeout(t); t = setTimeout(load, 220); });
@@ -459,67 +499,65 @@ function contactForm(c = null) {
   const mk = (k, lbl) => { f[k] = el("input", { value: c ? (c[k] || "") : "" }); return el("label", { class: "f" }, el("span", {}, lbl), f[k]); };
   const email = el("input", { value: c ? c.email : "", disabled: !!c, placeholder: "person@company.com" });
   modal({
-    title: c ? "EDIT CONTACT" : "ADD CONTACT", wide: true,
+    title: c ? "Edit contact" : "Add contact", wide: true,
     body: el("div", {},
       el("label", { class: "f" }, el("span", {}, "Email"), email),
       el("div", { class: "f2" }, mk("first_name", "First name"), mk("last_name", "Last name")),
       el("div", { class: "f2" }, mk("company", "Company"), mk("title", "Title")),
       el("div", { class: "f2" }, mk("phone", "Phone"), mk("website", "Website")),
-      c && el("p", { class: "hint" }, "status: " + c.status + (c.custom && Object.keys(c.custom).length ? " // custom: " + Object.keys(c.custom).join(", ") : "")),
+      c && el("p", { class: "hint" }, "Status: " + c.status + (c.custom && Object.keys(c.custom).length ? " · custom fields: " + Object.keys(c.custom).join(", ") : "")),
     ),
     actions: (close) => [
-      el("button", { class: "btn ghost", onclick: close }, "CANCEL()"),
-      el("button", { class: "btn", onclick: async () => {
+      el("button", { class: "btn ghost", onclick: close }, "Cancel"),
+      el("button", { class: "btn primary", onclick: async () => {
         const b = Object.fromEntries(Object.entries(f).map(([k, n]) => [k, n.value.trim()]));
         try {
           if (c) await api(`/contacts/${c.id}`, { method: "PUT", body: b });
           else await api("/contacts", { body: { ...b, email: email.value.trim() } });
-          close(); toast("SAVED", "ok"); go("contacts");
+          close(); toast("Saved", "ok"); go("contacts");
         } catch (e) { fail(e); }
-      } }, "SAVE()"),
+      } }, "Save"),
     ],
   });
 }
 
 function importContacts() {
   const file = el("input", { type: "file", accept: ".csv,text/csv" });
-  const listName = el("input", { placeholder: "optional — drop rows into this list" });
+  const listName = el("input", { placeholder: "optional — add rows to this list" });
   modal({
-    title: "IMPORT_CSV()",
+    title: "Import contacts",
     body: el("div", {},
       el("label", { class: "f" }, el("span", {}, "CSV file"), file),
       el("label", { class: "f" }, el("span", {}, "Add to list"), listName),
-      el("p", { class: "hint", html: "Needs an <span class='kbd'>email</span> column. first name / company / title / website are auto-mapped; other columns become merge fields." }),
+      el("p", { class: "hint", html: "Needs an <span class='kbd'>email</span> column. First name / company / title / website are mapped automatically; other columns become merge fields." }),
     ),
     actions: (close) => [
-      el("button", { class: "btn ghost", onclick: close }, "CANCEL()"),
-      el("button", { class: "btn", onclick: async () => {
-        if (!file.files[0]) return toast("pick a file", "warn");
+      el("button", { class: "btn ghost", onclick: close }, "Cancel"),
+      el("button", { class: "btn primary", onclick: async () => {
+        if (!file.files[0]) return toast("Choose a file", "warn");
         const fd = new FormData(); fd.append("file", file.files[0]);
         const qs = listName.value.trim() ? "?list_name=" + encodeURIComponent(listName.value.trim()) : "";
         try { const r = await api("/contacts/import" + qs, { method: "POST", form: fd });
-          close(); toast(`+${r.created} NEW / ${r.updated} UPD / ${r.skipped} SKIP`, "ok"); go("contacts");
+          close(); toast(`${r.created} new, ${r.updated} updated, ${r.skipped} skipped`, "ok"); go("contacts");
         } catch (e) { fail(e); }
-      } }, "IMPORT()"),
+      } }, "Import"),
     ],
   });
 }
 
-/* ---- MASS_MAIL ------------------------------------------------------- */
+/* ---- MASS MAIL ----------------------------------------------------- */
 VIEWS.mass_mail = async () => {
   await ensureRefs();
   const v = viewNode();
-  const [lists, campaigns] = await Promise.all([api("/lists").catch(() => []), api("/campaigns").catch(() => [])]);
+  const [lists] = await Promise.all([api("/lists").catch(() => [])]);
   CACHE.lists = lists;
 
-  v.append(el("div", { class: "section-label" }, "MASS_MAILING"));
+  v.append(viewTitle("Mass mail", "throttled bulk send"));
+  if (!CACHE.mailboxes.length) { v.append(el("div", { class: "empty" }, el("div", { class: "t" }, "No sending mailbox on this server"))); return; }
 
-  if (!CACHE.mailboxes.length) { v.append(el("div", { class: "empty" }, "no sending mailbox on this server")); return; }
-
-  /* ── new blast form ── */
   const from = el("select", {}, ...CACHE.mailboxes.map((m) => el("option", { value: m.id }, m.address)));
   const list = el("select", {}, ...(lists.length ? lists.map((l) => el("option", { value: l.id }, `${l.name} (${l.member_count})`))
-    : [el("option", { value: "" }, "— no lists — import contacts into one first —")]));
+    : [el("option", { value: "" }, "— no lists — import contacts into one first")]));
   const subject = el("input", { placeholder: "Quick question about {{company}}" });
   const bodyHtml = el("textarea", { style: "min-height:240px", placeholder: "<p>Hi {{first_name|there}},</p>" });
   const preview = el("iframe", { class: "preview-frame", sandbox: "" });
@@ -529,17 +567,17 @@ VIEWS.mass_mail = async () => {
   const trackO = el("input", { type: "checkbox", checked: true });
   const trackC = el("input", { type: "checkbox", checked: true });
 
-  function rp() { preview.srcdoc = `<!doctype html><meta charset=utf-8><style>body{font:13px/1.6 system-ui,sans-serif;color:#000;padding:10px}</style>${bodyHtml.value || "<em>(empty)</em>"}`; }
+  function rp() { preview.srcdoc = `<!doctype html><meta charset=utf-8><style>body{font:14px/1.6 system-ui,sans-serif;color:#111;padding:12px}</style>${bodyHtml.value || "<em style='color:#999'>Preview</em>"}`; }
   bodyHtml.addEventListener("input", rp); rp();
 
-  const launch = el("button", { class: "btn", onclick: doLaunch }, "LAUNCH()");
+  const launch = el("button", { class: "btn primary", onclick: doLaunch }, icon("megaphone"), "Launch campaign");
   async function doLaunch() {
-    if (!list.value) return toast("no list selected", "warn");
-    if (!subject.value.trim() || !bodyHtml.value.trim()) return toast("subject + body required", "warn");
-    launch.disabled = true; launch.textContent = "LAUNCH…";
+    if (!list.value) return toast("Pick a list", "warn");
+    if (!subject.value.trim() || !bodyHtml.value.trim()) return toast("Subject and body are required", "warn");
+    launch.disabled = true; launch.textContent = "Launching…";
     try {
       const c = await api("/campaigns", { body: {
-        name: subject.value.trim().slice(0, 60) + " // " + new Date().toISOString().slice(0, 10),
+        name: subject.value.trim().slice(0, 60) + " · " + new Date().toISOString().slice(0, 10),
         from_mailbox_id: +from.value, list_id: +list.value,
         daily_cap: +cap.value || 40, min_delay_seconds: +dMin.value || 60, max_delay_seconds: +dMax.value || 240,
         track_opens: trackO.checked, track_clicks: trackC.checked,
@@ -549,37 +587,37 @@ VIEWS.mass_mail = async () => {
         { step_order: 1, template_id: null, subject: subject.value, body_html: bodyHtml.value, body_text: "", wait_days: 0, condition: "always", same_thread: true },
       ] });
       await api(`/campaigns/${c.id}/start`, { method: "POST" });
-      toast("LAUNCHED // CAMPAIGN #" + c.id, "ok");
+      toast("Campaign launched", "ok");
       go("mass_mail");
-    } catch (e) { fail(e); launch.disabled = false; launch.textContent = "LAUNCH()"; }
+    } catch (e) { fail(e); launch.disabled = false; launch.replaceChildren(icon("megaphone"), document.createTextNode("Launch campaign")); }
   }
 
   v.append(el("div", { class: "panel" },
-    el("div", { class: "panel-head" }, el("span", {}, "NEW BLAST"), el("span", { class: "dimmer" }, "sends now, throttled")),
+    el("div", { class: "panel-head" }, el("span", {}, "New campaign")),
     el("div", { class: "panel-body" },
       el("div", { class: "f2" },
         el("label", { class: "f" }, el("span", {}, "Send from"), from),
         el("label", { class: "f" }, el("span", {}, "Audience list"), list)),
       el("label", { class: "f" }, el("span", {}, "Subject"), subject),
-      el("p", { class: "hint mb", html: "merge: <span class='kbd'>{{first_name|there}}</span> <span class='kbd'>{{company}}</span> &nbsp; spintax: <span class='kbd'>{quick|brief}</span>" }),
+      el("p", { class: "hint mb", html: "Merge tags: <span class='kbd'>{{first_name|there}}</span> <span class='kbd'>{{company}}</span> · spintax: <span class='kbd'>{quick|brief}</span>" }),
       el("div", { class: "split" },
         el("div", {}, el("label", { class: "f" }, el("span", {}, "HTML body"), bodyHtml)),
-        el("div", {}, el("span", { class: "dimmer up", style: "font-size:10px" }, "Preview (sample contact)"), preview)),
+        el("div", {}, el("span", { class: "dim small" }, "Preview (sample contact)"), preview)),
       el("div", { class: "divider" }),
       el("div", { class: "f3" },
         el("label", { class: "f" }, el("span", {}, "Daily cap"), cap),
         el("label", { class: "f" }, el("span", {}, "Min delay (s)"), dMin),
         el("label", { class: "f" }, el("span", {}, "Max delay (s)"), dMax)),
       el("div", { class: "row" },
-        el("label", { class: "row", style: "gap:6px;font-size:11px" }, trackO, "TRACK OPENS"),
-        el("label", { class: "row", style: "gap:6px;font-size:11px" }, trackC, "TRACK CLICKS")),
+        el("label", { class: "row small", style: "gap:6px" }, trackO, "Track opens"),
+        el("label", { class: "row small", style: "gap:6px" }, trackC, "Track clicks")),
       el("div", { class: "mt" }, launch),
     )));
 
-  /* ── running / past blasts ── */
-  const box = el("div", { class: "panel mt", id: "cmp-host" }, el("div", { class: "panel-head" }, el("span", {}, "CAMPAIGNS"), el("span", { class: "dimmer" }, campaigns.length + "")),
-    el("div", { class: "panel-body tight" }, el("div", { class: "loader" }, "load")));
-  v.append(box);
+  v.append(el("div", { class: "panel mt", id: "cmp-host" },
+    el("div", { class: "panel-head" }, el("span", {}, "Campaigns"),
+      el("button", { class: "btn sm ghost", onclick: () => drawCampaigns() }, icon("refresh"), "Refresh")),
+    el("div", { class: "panel-body tight" }, el("div", { class: "loader" }, "Loading"))));
   await drawCampaigns();
 };
 
@@ -587,7 +625,7 @@ async function drawCampaigns() {
   const host = $("#cmp-host .panel-body"); if (!host) return;
   const campaigns = await api("/campaigns");
   clear(host);
-  if (!campaigns.length) { host.append(el("div", { class: "t-empty" }, "no blasts yet")); return; }
+  if (!campaigns.length) { host.append(el("div", { class: "t-empty" }, "No campaigns yet")); return; }
   const rows = [];
   for (const c of campaigns.slice(0, 30)) {
     const s = await api(`/campaigns/${c.id}/stats`).catch(() => null);
@@ -600,55 +638,47 @@ async function drawCampaigns() {
       el("td", { class: "dim" }, s ? s.bounces : "—"),
       el("td", { style: "text-align:right" },
         (c.status === "running")
-          ? el("button", { class: "btn sm ghost", onclick: async () => { await api(`/campaigns/${c.id}/pause`, { method: "POST" }); toast("PAUSED", "warn"); drawCampaigns(); } }, "PAUSE()")
+          ? el("button", { class: "btn sm ghost", onclick: async () => { await api(`/campaigns/${c.id}/pause`, { method: "POST" }); toast("Paused", "warn"); drawCampaigns(); } }, icon("pause"), "Pause")
           : (c.status === "paused"
-            ? el("button", { class: "btn sm", onclick: async () => { await api(`/campaigns/${c.id}/resume`, { method: "POST" }); toast("RESUMED", "ok"); drawCampaigns(); } }, "RESUME()")
+            ? el("button", { class: "btn sm ghost", onclick: async () => { await api(`/campaigns/${c.id}/resume`, { method: "POST" }); toast("Resumed", "ok"); drawCampaigns(); } }, icon("play"), "Resume")
             : "")),
     ));
   }
   host.append(el("table", {},
-    el("thead", {}, el("tr", {}, el("th", {}, "Blast"), el("th", {}, "State"), el("th", {}, "Sent"), el("th", {}, "Open"), el("th", {}, "Reply"), el("th", {}, "Bnc"), el("th", {}, ""))),
+    el("thead", {}, el("tr", {}, el("th", {}, "Campaign"), el("th", {}, "Status"), el("th", {}, "Sent"), el("th", {}, "Opens"), el("th", {}, "Replies"), el("th", {}, "Bounces"), el("th", {}, ""))),
     el("tbody", {}, ...rows)));
 }
 
-/* ---- SPECS --------------------------------------------------------- */
+/* ---- SETTINGS ----------------------------------------------------- */
 VIEWS.specs = async () => {
   const v = viewNode();
   const id = IDENTITY || {};
   let dash = null;
   try { dash = await api("/dashboard/stats"); } catch { /* older server */ }
-
-  const spec = (n, k, val) => el("div", { class: "spec" }, el("div", { class: "n" }, n), el("div", { class: "k" }, k), el("div", { class: "v" }, val));
+  const spec = (n, k, val) => el("div", { class: "spec" }, el("div", { class: "n" }, n), el("div", { class: "k" }, k), el("div", {}, val));
 
   v.append(
-    el("div", { class: "section-label" }, "KLICK_MAIL // SPECS"),
-    el("p", { class: "tokens mb" }, "CUSTOM_EMAIL_CLIENT // MAILING_FOCUSED // FREE"),
-    el("div", { class: "specs" },
-      spec("01", "Type", "Custom Email Client"),
-      spec("02", "Pricing", "FREE"),
-      spec("03", "Focus", "Mailing & Communication"),
-      spec("04", "HTML Composition", "Custom HTML email bodies + live preview"),
-      spec("05", "Contacts List", "Built-in, CSV import, merge fields"),
-      spec("06", "Mass Mailing", "Throttled blasts via Phosphor campaigns"),
-      spec("07", "Transport", "Phosphor JSON API (SMTP/DKIM handled server-side)"),
-      spec("08", "Security", "Bearer token over TLS; no cookies, no third parties"),
-      spec("09", "Privacy", "No tracking, no ads, no data mining"),
-    ),
-    el("div", { class: "section-label mt" }, "CONNECTION"),
-    el("div", { class: "specs" },
-      spec("→", "Endpoint", ENDPOINT || "—"),
-      spec("→", "Operator", id.email || "—"),
-      spec("→", "Domain", id.domain || "—"),
-      spec("→", "Server host", id.host || "—"),
-      spec("→", "Phosphor", id.version || "—"),
-      spec("→", "Outbound", id.outbound === false ? "DISABLED" : "ENABLED"),
-    ),
-    dash && el("div", { class: "grid3 mt" },
+    viewTitle("Settings"),
+    el("div", { class: "panel mb" },
+      el("div", { class: "panel-head" }, el("span", {}, "Connection")),
+      el("div", { class: "panel-body tight" }, el("div", { class: "specs", style: "border:0" },
+        spec("", "Server", ENDPOINT || "—"),
+        spec("", "Operator", id.email || "—"),
+        spec("", "Domain", id.domain || "—"),
+        spec("", "Mail host", id.host || "—"),
+        spec("", "Phosphor version", id.version || "—"),
+        spec("", "Outbound", id.outbound === false ? "disabled" : "enabled"),
+      ))),
+    dash && el("div", { class: "grid3 mb" },
       cell("Mailboxes", dash.mailboxes), cell("Contacts", dash.contacts),
       cell("Queued", dash.outbound_queued), cell("Sent 24h", dash.outbound_sent_24h),
       cell("Replies 7d", dash.replies_7d), cell("Suppressed", dash.suppressed)),
-    el("div", { class: "mt" },
-      el("button", { class: "btn danger", onclick: () => confirmDialog("Disconnect from this Phosphor server?", () => { localStorage.removeItem(LS.token); localStorage.removeItem(LS.identity); location.reload(); }, { yes: "DISCONNECT()" }) }, "DISCONNECT()")),
+    el("div", { class: "panel mb" },
+      el("div", { class: "panel-head" }, el("span", {}, "About")),
+      el("div", { class: "panel-body" },
+        el("p", { class: "dim small" }, "KlickMail v1.0.0 — a client for Phosphor. HTML composition, contacts, mass mailing. Sending, DKIM, tracking, bounce handling and suppression all run server-side in Phosphor."),
+        el("p", { class: "hint mt" }, "Advanced controls (domains, DNS records, sequence editor, suppression list) live in the Phosphor control panel at " + (ENDPOINT || "the server") + "."))),
+    el("button", { class: "btn danger", onclick: () => confirmDialog("Disconnect from this server?", () => { localStorage.removeItem(LS.token); localStorage.removeItem(LS.identity); location.reload(); }, { yes: "Disconnect" }) }, icon("logout"), "Disconnect"),
   );
 };
 function cell(k, val) { return el("div", { class: "cell" }, el("div", { class: "k" }, k), el("div", { class: "v" }, fmtInt(val))); }
@@ -662,12 +692,9 @@ async function boot() {
 
   $("#app").replaceWith(shell());
   const tag = $("#conn-tag");
-  if (tag && IDENTITY) tag.textContent = IDENTITY.domain + " // " + (IDENTITY.email || "");
+  if (tag && IDENTITY) tag.textContent = (IDENTITY.domain || "") + (IDENTITY.email ? " · " + IDENTITY.email : "");
   if (!_wired) {
-    setInterval(() => {
-      if (TAB === "mass_mail" && $("#cmp-host")) drawCampaigns().catch(() => {});
-      if (TAB === "inbox" && $("#mail")) { /* light: only refresh folder counts silently */ }
-    }, 15000);
+    setInterval(() => { if (TAB === "mass_mail" && $("#cmp-host")) drawCampaigns().catch(() => {}); }, 15000);
     _wired = true;
   }
   go(TAB);
