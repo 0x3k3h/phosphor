@@ -1,0 +1,25 @@
+{
+  "name": "klickmail-desktop",
+  "productName": "KlickMail",
+  "version": "1.0.0",
+  "description": "KLICK_MAIL // desktop client for a Phosphor mail server",
+  "main": "main.js",
+  "author": "Demole IT & Research Private Limited",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "org.hermeias.klickmail",
+    "files": ["main.js", "../client/**/*"],
+    "directories": { "output": "dist" },
+    "win": { "target": "nsis" },
+    "linux": { "target": ["AppImage", "deb"], "category": "Network" },
+    "mac": { "target": "dmg" }
+  }
+}

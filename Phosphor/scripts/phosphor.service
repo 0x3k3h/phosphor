@@ -1,0 +1,22 @@
+[Unit]
+Description=Phosphor mail server + cold-outreach engine
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# setup-linux.sh --systemd rewrites these two lines for your machine:
+WorkingDirectory=/opt/phosphor
+User=phosphor
+ExecStart=/opt/phosphor/.venv/bin/python run.py
+Restart=always
+RestartSec=3
+# Needed to bind ports 25 and 587 without running as root:
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+# Light hardening. Phosphor only writes inside its own WorkingDirectory (data/),
+# so we don't lock that down here — add ProtectHome=/ReadWritePaths yourself if
+# the repo lives outside the service user's home.
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

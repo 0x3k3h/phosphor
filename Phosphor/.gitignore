@@ -1,0 +1,25 @@
+# Phosphor
+.env
+data/
+*.db
+*.db-wal
+*.db-shm
+*.pem
+maildirs/
+outbound_spool/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
